@@ -33,20 +33,22 @@ func NewQuestionManager(dbFile string) (*QuestionManager, error) {
 	// Create tables if they don't exist
 	createTablesSQL := `
     CREATE TABLE IF NOT EXISTS questions (
-        id INTEGER PRIMARY KEY,
-        number INTEGER UNIQUE,
-        type TEXT,
-        difficulty TEXT,
-        prompt TEXT
-    );
-    CREATE TABLE IF NOT EXISTS completed (
-        id INTEGER PRIMARY KEY,
-        number INTEGER UNIQUE,
-        type TEXT,
-        difficulty TEXT,
-        prompt TEXT,
-        answer TEXT
-    );`
+    id INTEGER PRIMARY KEY,
+    number INTEGER UNIQUE,
+    type TEXT,
+    difficulty TEXT,
+    prompt TEXT
+	);
+
+	CREATE TABLE IF NOT EXISTS completed (
+		id INTEGER PRIMARY KEY,
+		number INTEGER UNIQUE,
+		type TEXT,
+		difficulty TEXT,
+		prompt TEXT,
+		answer TEXT
+	);
+	`
 	_, err = db.Exec(createTablesSQL)
 	if err != nil {
 		return nil, err
@@ -60,10 +62,36 @@ func (qm *QuestionManager) Close() error {
 	return qm.db.Close()
 }
 
-// AddQuestion adds a new question to the questions table.
+// AddQuestion adds a new question or updates an existing one in the questions table.
 func (qm *QuestionManager) AddQuestion(q Question) error {
-	_, err := qm.db.Exec("INSERT INTO questions (number, type, difficulty, prompt) VALUES (?, ?, ?, ?)", q.Number, q.Type, q.Difficulty, q.Prompt)
-	return err
+	// Check if the question exists
+	var exists bool
+	err := qm.db.QueryRow("SELECT EXISTS(SELECT 1 FROM questions WHERE number = ?)", q.Number).Scan(&exists)
+	if err != nil {
+		return fmt.Errorf("error checking existence of question: %v", err)
+	}
+
+	if exists {
+		// Update existing question
+		_, err := qm.db.Exec(
+			"UPDATE questions SET type = ?, difficulty = ?, prompt = ? WHERE number = ?",
+			q.Type, q.Difficulty, q.Prompt, q.Number,
+		)
+		if err != nil {
+			return fmt.Errorf("error updating question: %v", err)
+		}
+	} else {
+		// Insert new question
+		_, err := qm.db.Exec(
+			"INSERT INTO questions (number, type, difficulty, prompt) VALUES (?, ?, ?, ?)",
+			q.Number, q.Type, q.Difficulty, q.Prompt,
+		)
+		if err != nil {
+			return fmt.Errorf("error adding new question: %v", err)
+		}
+	}
+
+	return nil
 }
 
 // DeleteQuestion deletes a question from the questions table by its number.

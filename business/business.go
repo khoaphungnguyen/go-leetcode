@@ -40,9 +40,9 @@ func (bm *BusinessManager) GenerateQuestions(count int) ([]storage.Question, err
 		if unique {
 			q := storage.Question{
 				Number:     qNumber,
-				Type:       "array", // Example: Set type, difficulty, prompt dynamically if available
-				Difficulty: "medium",
-				Prompt:     fmt.Sprintf("This is the prompt for question %d", qNumber),
+				Type:       "", // Example: Set type, difficulty, prompt dynamically if available
+				Difficulty: "",
+				Prompt:     "",
 			}
 			newQuestions = append(newQuestions, q)
 			if err := bm.qm.AddQuestion(q); err != nil {
